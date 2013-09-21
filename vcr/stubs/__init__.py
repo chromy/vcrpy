@@ -6,7 +6,7 @@ from cStringIO import StringIO
 from vcr.request import Request
 
 
-class VCRHTTPResponse(object):
+class VCRHTTPResponse(dict):
     """
     Stub reponse class that gets returned instead of a HTTPResponse
     """
@@ -16,6 +16,9 @@ class VCRHTTPResponse(object):
         self.status = recorded_response['status']['code']
         self.version = None
         self._content = StringIO(self.recorded_response['body']['string'])
+
+        # httplib2 expects status to be a entry on this object
+        self['status'] = str(self.status)
 
         # We are skipping the header parsing (they have already been parsed
         # at this point) and directly  adding the headers to the header
@@ -28,6 +31,8 @@ class VCRHTTPResponse(object):
             # the msg.headers list representation of headers, so
             # I have to add it to both.
             self.msg.headers.append("{0}:{1}".format(key, val))
+            # httplib2 expects the headers to be entries on this object
+            self[key.lower()] = val
 
         self.length = self.msg.getheader('content-length') or None
 
@@ -200,6 +205,8 @@ class VCRHTTPSConnection(VCRConnectionMixin, HTTPSConnection):
         '''I overrode the init and copied a lot of the code from the parent
         class because HTTPConnection when this happens has been replaced by
         VCRHTTPConnection,  but doing it here lets us use the original one.'''
-        HTTPConnection.__init__(self, *args, **kwargs)
+        ALLOWED = set(('host', 'port', 'strict', 'timeout', 'source_address'))
+        http_kwargs = {k : v for k, v in kwargs.items() if k in ALLOWED}
+        HTTPConnection.__init__(self, *args, **http_kwargs)
         self.key_file = kwargs.pop('key_file', None)
         self.cert_file = kwargs.pop('cert_file', None)

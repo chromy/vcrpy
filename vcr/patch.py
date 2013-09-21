@@ -58,6 +58,16 @@ def install(cassette):
     except ImportError:  # pragma: no cover
         pass
 
+    # patch httplib2
+    try:
+        import httplib2
+        from .stubs.httplib2_stubs import VCRHTTPSConnectionWithTimeout, \
+            VCRHTTPConnectionWithTimeout
+
+        httplib2.SCHEME_TO_CONNECTION['https'] = VCRHTTPSConnectionWithTimeout
+        httplib2.SCHEME_TO_CONNECTION['http'] = VCRHTTPConnectionWithTimeout
+    except ImportError: # pragma: no cover
+        pass
 
 def reset():
     '''Undo all the patching'''
@@ -76,4 +86,13 @@ def reset():
         cpool.VerifiedHTTPSConnection = _VerifiedHTTPSConnection
         cpool.HTTPConnection = _HTTPConnection
     except ImportError:  # pragma: no cover
+        pass
+
+    try:
+        import httplib2
+        httplib2.SCHEME_TO_CONNECTION['https'] = \
+            httplib2.HTTPSConnectionWithTimeout
+        httplib2.SCHEME_TO_CONNECTION['http'] = \
+            httplib2.HTTPConnectionWithTimeout
+    except ImportError: # pragma: no cover
         pass
